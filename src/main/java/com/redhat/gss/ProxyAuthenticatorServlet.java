@@ -16,17 +16,13 @@ public class ProxyAuthenticatorServlet extends HttpServlet {
 
         System.out.println("ProxyAuthenticatorServlet.init()");
 
-        String proxyUser = System.getProperty("http.proxyUser");
-        String proxyPassword = System.getProperty("http.proxyPassword");
+        String httpProxyUser = System.getProperty("http.proxyUser");
+        String httpProxyPassword = System.getProperty("http.proxyPassword");
+        String httpsProxyUser = System.getProperty("https.proxyUser");
+        String httpsProxyPassword = System.getProperty("https.proxyPassword");
 
-        if (proxyUser == null) {
-            System.out.println("http.proxyUser is not configured");
-        } else if (proxyPassword == null) {
-            System.out.println("http.proxyPassword is not configured");
-        } else {
-            System.out.println("Setting ProxyAuthenticator");
-            Authenticator.setDefault(new ProxyAuthenticator(proxyUser, proxyPassword));
-        }
+        System.out.println("Setting ProxyAuthenticator");
+        Authenticator.setDefault(new ProxyAuthenticator(httpProxyUser, httpProxyPassword, httpsProxyUser, httpsProxyPassword));
     }
 
     @Override
@@ -36,15 +32,29 @@ public class ProxyAuthenticatorServlet extends HttpServlet {
 
     class ProxyAuthenticator extends Authenticator {
 
-        private String user, password;
+        private String httpProxyUser;
+        private String httpProxyPassword;
+        private String httpsProxyUser;
+        private String httpsProxyPassword;
 
-        public ProxyAuthenticator(String user, String password) {
-            this.user = user;
-            this.password = password;
+        public ProxyAuthenticator(String httpProxyUser, String httpProxyPassword, String httpsProxyUser, String httpsProxyPassword) {
+            this.httpProxyUser = httpProxyUser;
+            this.httpProxyPassword = httpProxyPassword;
+            this.httpsProxyUser = httpsProxyUser;
+            this.httpsProxyPassword = httpsProxyPassword;
         }
 
         protected PasswordAuthentication getPasswordAuthentication() {
-            return new PasswordAuthentication(user, password.toCharArray());
+            if (getRequestorType() == RequestorType.PROXY) {
+                String protocol = getRequestingProtocol();
+
+                if (protocol.equalsIgnoreCase("http")) {
+                    return new PasswordAuthentication(httpProxyUser, httpProxyPassword.toCharArray());
+                } else if (protocol.equalsIgnoreCase("https")) {
+                    return new PasswordAuthentication(httpsProxyUser, httpsProxyPassword.toCharArray());
+                }
+            }
+            return null;
         }
     }
 }
